@@ -1,0 +1,31 @@
+suite: minio objectstore
+templates:
+  - objectstore.yaml
+tests:
+  - it: should set endpoint and bucket from values
+    set:
+      backup.minio.endpoint: https://s3.example.com
+      backup.minio.bucket: pg-backups
+      backup.retentionPolicy: "30d"
+    asserts:
+      - equal:
+          path: metadata.name
+          value: minio-store
+      - equal:
+          path: spec.configuration.endpointURL
+          value: https://s3.example.com
+      - equal:
+          path: spec.configuration.destinationPath
+          value: s3://pg-backups
+      - equal:
+          path: spec.retentionPolicy
+          value: "30d"
+
+  - it: should reference barman-credentials secret for S3 auth
+    asserts:
+      - equal:
+          path: spec.configuration.s3Credentials.accessKeyId.name
+          value: barman-credentials
+      - equal:
+          path: spec.configuration.s3Credentials.secretAccessKey.name
+          value: barman-credentials

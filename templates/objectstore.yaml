@@ -1,0 +1,21 @@
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: minio-store
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cnpg-cluster.labels" . | nindent 4 }}
+spec:
+  configuration:
+    destinationPath: s3://{{ .Values.backup.minio.bucket }}
+    endpointURL: {{ .Values.backup.minio.endpoint }}
+    s3Credentials:
+      accessKeyId:
+        name: barman-credentials
+        key: access-key-id
+      secretAccessKey:
+        name: barman-credentials
+        key: secret-access-key
+    wal:
+      compression: gzip
+  retentionPolicy: {{ .Values.backup.retentionPolicy | quote }}
