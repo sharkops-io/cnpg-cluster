@@ -1,0 +1,18 @@
+apiVersion: v2
+name: cnpg-cluster
+description: Reusable Helm chart for CloudNativePG clusters with Barman/Minio WAL archiving
+type: application
+version: 0.1.0
+appVersion: "18"
+home: https://gitlab.com/sharkops/helm-charts/cnpg-cluster
+sources:
+  - https://gitlab.com/sharkops/helm-charts/cnpg-cluster
+maintainers:
+  - name: Andrew Landsverk
+    email: noreply@example.com
+keywords:
+  - cnpg
+  - postgresql
+  - cloudnative-pg
+  - barman
+  - backup

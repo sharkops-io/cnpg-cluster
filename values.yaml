@@ -1,0 +1,16 @@
+cluster:
+  instances: 2
+  storage:
+    size: 10Gi
+    class: longhorn-postgres-replica-storage
+  postgresql:
+    major: 18
+
+backup:
+  schedule: "0 2 0 * * *"
+  minio:
+    endpoint: https://s3.example.com
+    bucket: pg-backups
+    accessKeyId: ""
+    secretAccessKey: ""
+  retentionPolicy: "30d"
