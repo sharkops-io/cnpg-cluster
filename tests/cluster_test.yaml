@@ -1,0 +1,55 @@
+suite: cnpg cluster
+templates:
+  - cluster.yaml
+tests:
+  - it: should use release name as cluster name
+    release:
+      name: coder-database
+    asserts:
+      - equal:
+          path: metadata.name
+          value: coder-database
+
+  - it: should default to 2 instances
+    asserts:
+      - equal:
+          path: spec.instances
+          value: 2
+
+  - it: should use configured number of instances
+    set:
+      cluster.instances: 3
+    asserts:
+      - equal:
+          path: spec.instances
+          value: 3
+
+  - it: should use configured storage size
+    set:
+      cluster.storage.size: 20Gi
+    asserts:
+      - equal:
+          path: spec.storage.size
+          value: 20Gi
+
+  - it: should use configured storage class
+    set:
+      cluster.storage.class: my-storage-class
+    asserts:
+      - equal:
+          path: spec.storage.pvcTemplate.storageClassName
+          value: my-storage-class
+
+  - it: should use configured postgres major version
+    set:
+      cluster.postgresql.major: 17
+    asserts:
+      - equal:
+          path: spec.imageCatalogRef.major
+          value: 17
+
+  - it: should reference minio-store for WAL archiving
+    asserts:
+      - equal:
+          path: spec.plugins[0].parameters.barmanObjectName
+          value: minio-store

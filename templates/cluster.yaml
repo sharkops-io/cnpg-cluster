@@ -1,0 +1,24 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cnpg-cluster.labels" . | nindent 4 }}
+spec:
+  instances: {{ .Values.cluster.instances }}
+  primaryUpdateStrategy: unsupervised
+  imageCatalogRef:
+    apiGroup: postgresql.cnpg.io
+    kind: ClusterImageCatalog
+    name: postgresql
+    major: {{ .Values.cluster.postgresql.major }}
+  storage:
+    size: {{ .Values.cluster.storage.size }}
+    pvcTemplate:
+      storageClassName: {{ .Values.cluster.storage.class }}
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: minio-store
