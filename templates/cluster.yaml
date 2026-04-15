@@ -7,6 +7,9 @@ metadata:
     {{- include "cnpg-cluster.labels" . | nindent 4 }}
 spec:
   instances: {{ .Values.cluster.instances }}
+  {{- if .Values.cluster.enableSuperuserAccess }}
+  enableSuperuserAccess: true
+  {{- end }}
   primaryUpdateStrategy: unsupervised
   imageCatalogRef:
     apiGroup: postgresql.cnpg.io

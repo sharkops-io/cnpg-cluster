@@ -1,5 +1,6 @@
 cluster:
   instances: 2
+  enableSuperuserAccess: false
   storage:
     size: 10Gi
     class: longhorn-postgres-replica-storage
