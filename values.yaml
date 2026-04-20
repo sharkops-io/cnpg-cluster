@@ -10,8 +10,8 @@ cluster:
 backup:
   schedule: "0 2 0 * * *"
   minio:
-    endpoint: https://s3.example.com
+    endpoint: https://rustfs.example.com
     bucket: pg-backups
     accessKeyId: ""
     secretAccessKey: ""
-  retentionPolicy: "30d"
+  retentionPolicy: "15d"
