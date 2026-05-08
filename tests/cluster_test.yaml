@@ -10,11 +10,11 @@ tests:
           path: metadata.name
           value: coder-database
 
-  - it: should default to 2 instances
+  - it: should default to 1 instances
     asserts:
       - equal:
           path: spec.instances
-          value: 2
+          value: 1
 
   - it: should use configured number of instances
     set:
