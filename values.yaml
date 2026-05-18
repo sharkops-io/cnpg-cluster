@@ -1,5 +1,5 @@
 cluster:
-  instances: 1
+  instances: 2
   enableSuperuserAccess: false
   storage:
     size: 10Gi
