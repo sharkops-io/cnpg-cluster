@@ -1,0 +1,15 @@
+{{- if .Values.walSwitch.enabled }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Release.Name }}-wal-switch
+  namespace: {{ .Release.Namespace }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Release.Name }}-wal-switch
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: {{ .Release.Name }}-wal-switch
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

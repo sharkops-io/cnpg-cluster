@@ -15,3 +15,21 @@ backup:
     accessKeyId: ""
     secretAccessKey: ""
   retentionPolicy: "15d"
+
+walSwitch:
+  enabled: true
+  # Mitigates cloudnative-pg/plugin-barman-cloud#652: archive_timeout
+  # doesn't reliably force a WAL switch on an idle/low-write database, so a
+  # "completed" backup can end up unrestorable (FATAL: WAL ends before end
+  # of online backup) because the WAL segment needed to close it out never
+  # gets archived. This forces a switch on the primary on a fixed schedule
+  # regardless of write volume.
+  schedule: "*/15 * * * *"
+  image:
+    # Matches the cluster's server version (1.35.6) - kubectl's skew policy
+    # only supports clients within ~1 minor version of the apiserver, so
+    # this should track the cluster's k8s version going forward, not drift
+    # behind it. Same image/tag as pgadmin-discovery's CronJob for the same
+    # reason.
+    repository: docker.io/alpine/k8s
+    tag: "1.36.2"

@@ -1,0 +1,62 @@
+suite: wal switch cronjob
+templates:
+  - wal-switch-cronjob.yaml
+  - wal-switch-role.yaml
+  - wal-switch-serviceaccount.yaml
+  - wal-switch-rolebinding.yaml
+  - wal-switch-configmap.yaml
+tests:
+  - it: should use release name as the cluster name env var
+    release:
+      name: coder-database
+    template: wal-switch-cronjob.yaml
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env[0].value
+          value: coder-database
+
+  - it: should default to a 15-minute schedule
+    template: wal-switch-cronjob.yaml
+    asserts:
+      - equal:
+          path: spec.schedule
+          value: "*/15 * * * *"
+
+  - it: should use configured schedule
+    set:
+      walSwitch.schedule: "*/5 * * * *"
+    template: wal-switch-cronjob.yaml
+    asserts:
+      - equal:
+          path: spec.schedule
+          value: "*/5 * * * *"
+
+  - it: should render nothing when disabled
+    set:
+      walSwitch.enabled: false
+    templates:
+      - wal-switch-cronjob.yaml
+      - wal-switch-role.yaml
+      - wal-switch-serviceaccount.yaml
+      - wal-switch-rolebinding.yaml
+      - wal-switch-configmap.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should grant pods/exec create on the role
+    template: wal-switch-role.yaml
+    asserts:
+      - contains:
+          path: rules
+          content:
+            apiGroups: [""]
+            resources: ["pods/exec"]
+            verbs: ["create"]
+
+  - it: should not run as root
+    template: wal-switch-cronjob.yaml
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.securityContext.runAsNonRoot
+          value: true

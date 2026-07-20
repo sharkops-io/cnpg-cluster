@@ -1,0 +1,19 @@
+{{- if .Values.walSwitch.enabled }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Release.Name }}-wal-switch
+  namespace: {{ .Release.Namespace }}
+rules:
+  # Needed to find whichever pod currently holds the primary role - can't be
+  # scoped by resourceNames since the primary pod's name changes across
+  # failovers. Blast radius is contained to this one namespace, where the
+  # only pods are this cluster's own instances and this job's own completed
+  # pods.
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+{{- end }}

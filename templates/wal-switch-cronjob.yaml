@@ -1,0 +1,50 @@
+{{- if .Values.walSwitch.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-wal-switch
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cnpg-cluster.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.walSwitch.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 120
+      template:
+        spec:
+          serviceAccountName: {{ .Release.Name }}-wal-switch
+          restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            fsGroup: 65532
+          containers:
+            - name: wal-switch
+              image: "{{ .Values.walSwitch.image.repository }}:{{ .Values.walSwitch.image.tag }}"
+              command: ["/bin/bash", "/scripts/switch-wal.sh"]
+              env:
+                - name: CLUSTER_NAME
+                  value: {{ .Release.Name | quote }}
+                - name: NAMESPACE
+                  value: {{ .Release.Namespace | quote }}
+              volumeMounts:
+                - name: script
+                  mountPath: /scripts
+                  readOnly: true
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+          volumes:
+            - name: script
+              configMap:
+                name: {{ .Release.Name }}-wal-switch-script
+                defaultMode: 0555
+{{- end }}
