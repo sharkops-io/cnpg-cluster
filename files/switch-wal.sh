@@ -19,4 +19,16 @@ echo "[wal-switch] switching WAL on $POD"
 # gates the *external*, password-based superuser Secret/Service - confirmed
 # against a live cluster it has no bearing on local socket access from
 # inside the pod, which is how CNPG's own instance manager operates too.
-kubectl exec -n "$NAMESPACE" "$POD" -c postgres -- psql -U postgres -Atqc "SELECT pg_switch_wal();"
+#
+# pg_switch_wal() alone is a documented no-op when there's been zero WAL
+# activity since the last switch - exactly the idle-database case this job
+# exists to fix. Confirmed live against a genuinely idle cluster: LSN didn't
+# move at all from a bare pg_switch_wal() call. pg_logical_emit_message()
+# writes a real, tiny WAL record without touching any table, giving the
+# switch something to actually close - confirmed this combination advances
+# to a new segment and gets archived within seconds, even on an otherwise
+# completely idle database.
+kubectl exec -n "$NAMESPACE" "$POD" -c postgres -- psql -U postgres -Atqc "
+SELECT pg_logical_emit_message(false, 'wal-switch-heartbeat', now()::text);
+SELECT pg_switch_wal();
+"
