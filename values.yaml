@@ -3,7 +3,7 @@ cluster:
   enableSuperuserAccess: false
   storage:
     size: 10Gi
-    class: longhorn-postgres-replica-storage
+    class: longhorn-postgres-replica-storage-besteffort
   postgresql:
     major: 18
 
