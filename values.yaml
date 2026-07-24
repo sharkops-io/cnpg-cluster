@@ -14,7 +14,7 @@ backup:
     bucket: pg-backups
     accessKeyId: ""
     secretAccessKey: ""
-  retentionPolicy: "15d"
+  retentionPolicy: "7d"
 
 walSwitch:
   enabled: true
