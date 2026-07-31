@@ -18,13 +18,30 @@ backup:
 
 walSwitch:
   enabled: true
-  # Mitigates cloudnative-pg/plugin-barman-cloud#652: archive_timeout
-  # doesn't reliably force a WAL switch on an idle/low-write database, so a
-  # "completed" backup can end up unrestorable (FATAL: WAL ends before end
-  # of online backup) because the WAL segment needed to close it out never
-  # gets archived. This forces a switch on the primary on a fixed schedule
-  # regardless of write volume.
-  schedule: "*/15 * * * *"
+  # Mitigates cloudnative-pg/plugin-barman-cloud#652 (still open as of
+  # 2026-07-31): archive_timeout doesn't reliably force a WAL switch on an
+  # idle/low-write database, so a "completed" backup can end up unrestorable
+  # (FATAL: WAL ends before end of online backup) because the WAL segment
+  # needed to close it out never gets archived. Backups run against a standby
+  # and CNPG does not switch the WAL on the primary for those, so this forces
+  # it regardless of write volume.
+  #
+  # The switch is only actually NEEDED after a backup completes. Hourly is the
+  # default because it is correct for any backup.schedule without the chart
+  # having to do cron arithmetic — a derived schedule that came out wrong would
+  # mean no switch at all, i.e. silently unrestorable backups.
+  #
+  # Each switch forces a full 16 MiB WAL segment per cluster, so the frequency
+  # is not free: the previous "*/15 * * * *" default was 96 switches/day/cluster
+  # (~7.5 GiB/day across five clusters on the cluster), against daily backups that
+  # complete in under 20 s.
+  #
+  # To cut that ~24x further, align this to your backup.schedule — set it a few
+  # minutes after the backup starts. backup.schedule is CNPG's 6-field cron
+  # (seconds first); this is a standard 5-field Kubernetes CronJob schedule.
+  # Example, for backup.schedule "0 2 0 * * *" (00:02:00 daily):
+  #     schedule: "15 0 * * *"   # 00:15, comfortably after the backup finishes
+  schedule: "0 * * * *"
   image:
     # Matches the cluster's server version (1.35.6) - kubectl's skew policy
     # only supports clients within ~1 minor version of the apiserver, so
