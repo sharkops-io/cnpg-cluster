@@ -18,13 +18,31 @@ backup:
 
 walSwitch:
   enabled: true
-  # Mitigates cloudnative-pg/plugin-barman-cloud#652: archive_timeout
-  # doesn't reliably force a WAL switch on an idle/low-write database, so a
-  # "completed" backup can end up unrestorable (FATAL: WAL ends before end
-  # of online backup) because the WAL segment needed to close it out never
-  # gets archived. This forces a switch on the primary on a fixed schedule
-  # regardless of write volume.
-  schedule: "*/15 * * * *"
+  # Mitigates cloudnative-pg/plugin-barman-cloud#652 (still open as of
+  # 2026-07-31): archive_timeout doesn't reliably force a WAL switch on an
+  # idle/low-write database, so a "completed" backup can end up unrestorable
+  # (FATAL: WAL ends before end of online backup) because the WAL segment
+  # needed to close it out never gets archived. Backups run against a standby
+  # and CNPG does not switch the WAL on the primary for those, so this forces
+  # it regardless of write volume.
+  #
+  # The switch is only NEEDED after a backup completes, so it runs once a day,
+  # an hour after the default backup.schedule ("0 2 0 * * *" = 00:02:00). The
+  # previous "*/15 * * * *" default fired 96 times a day for a once-daily
+  # backup: each switch forces a full 16 MiB WAL segment per cluster, which was
+  # ~7.5 GiB/day across five clusters on the cluster, against backups that complete
+  # in under 20 s.
+  #
+  # !! If you override backup.schedule, override this too. !!
+  # They are deliberately NOT derived from each other: cron arithmetic in Helm
+  # (including minute overflow into the next hour) could produce a schedule that
+  # silently never fires after a backup, which means unrestorable backups — a
+  # far worse failure than some wasted writes. Keep this comfortably after the
+  # backup starts; an hour is generous, backups here finish in seconds.
+  #
+  # Note the two use different cron dialects: backup.schedule is CNPG's 6-field
+  # form (seconds first), this is a standard 5-field Kubernetes CronJob.
+  schedule: "0 1 * * *"
   image:
     # Matches the cluster's server version (1.35.6) - kubectl's skew policy
     # only supports clients within ~1 minor version of the apiserver, so
