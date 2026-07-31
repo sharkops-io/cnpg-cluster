@@ -15,12 +15,12 @@ tests:
           path: spec.jobTemplate.spec.template.spec.containers[0].env[0].value
           value: coder-database
 
-  - it: should default to a 15-minute schedule
+  - it: should default to once daily, an hour after the default backup
     template: wal-switch-cronjob.yaml
     asserts:
       - equal:
           path: spec.schedule
-          value: "*/15 * * * *"
+          value: "0 1 * * *"
 
   - it: should use configured schedule
     set:

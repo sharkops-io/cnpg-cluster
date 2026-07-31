@@ -26,22 +26,23 @@ walSwitch:
   # and CNPG does not switch the WAL on the primary for those, so this forces
   # it regardless of write volume.
   #
-  # The switch is only actually NEEDED after a backup completes. Hourly is the
-  # default because it is correct for any backup.schedule without the chart
-  # having to do cron arithmetic — a derived schedule that came out wrong would
-  # mean no switch at all, i.e. silently unrestorable backups.
+  # The switch is only NEEDED after a backup completes, so it runs once a day,
+  # an hour after the default backup.schedule ("0 2 0 * * *" = 00:02:00). The
+  # previous "*/15 * * * *" default fired 96 times a day for a once-daily
+  # backup: each switch forces a full 16 MiB WAL segment per cluster, which was
+  # ~7.5 GiB/day across five clusters on the cluster, against backups that complete
+  # in under 20 s.
   #
-  # Each switch forces a full 16 MiB WAL segment per cluster, so the frequency
-  # is not free: the previous "*/15 * * * *" default was 96 switches/day/cluster
-  # (~7.5 GiB/day across five clusters on the cluster), against daily backups that
-  # complete in under 20 s.
+  # !! If you override backup.schedule, override this too. !!
+  # They are deliberately NOT derived from each other: cron arithmetic in Helm
+  # (including minute overflow into the next hour) could produce a schedule that
+  # silently never fires after a backup, which means unrestorable backups — a
+  # far worse failure than some wasted writes. Keep this comfortably after the
+  # backup starts; an hour is generous, backups here finish in seconds.
   #
-  # To cut that ~24x further, align this to your backup.schedule — set it a few
-  # minutes after the backup starts. backup.schedule is CNPG's 6-field cron
-  # (seconds first); this is a standard 5-field Kubernetes CronJob schedule.
-  # Example, for backup.schedule "0 2 0 * * *" (00:02:00 daily):
-  #     schedule: "15 0 * * *"   # 00:15, comfortably after the backup finishes
-  schedule: "0 * * * *"
+  # Note the two use different cron dialects: backup.schedule is CNPG's 6-field
+  # form (seconds first), this is a standard 5-field Kubernetes CronJob.
+  schedule: "0 1 * * *"
   image:
     # Matches the cluster's server version (1.35.6) - kubectl's skew policy
     # only supports clients within ~1 minor version of the apiserver, so
