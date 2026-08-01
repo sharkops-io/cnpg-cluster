@@ -20,6 +20,9 @@ spec:
     size: {{ .Values.cluster.storage.size }}
     pvcTemplate:
       storageClassName: {{ .Values.cluster.storage.class }}
+  postgresql:
+    parameters:
+      archive_timeout: {{ .Values.cluster.postgresql.archiveTimeout | quote }}
   plugins:
     - name: barman-cloud.cloudnative-pg.io
       isWALArchiver: true

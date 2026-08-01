@@ -53,3 +53,20 @@ tests:
       - equal:
           path: spec.plugins[0].parameters.barmanObjectName
           value: minio-store
+
+  - it: should set archive_timeout explicitly rather than inherit CNPG's 5min default
+    template: cluster.yaml
+    asserts:
+      - equal:
+          path: spec.postgresql.parameters.archive_timeout
+          value: "30min"
+
+  - it: should allow overriding archive_timeout
+    set:
+      cluster.postgresql.archiveTimeout: 1h
+    template: cluster.yaml
+    asserts:
+      - equal:
+          path: spec.postgresql.parameters.archive_timeout
+          value: "1h"
+
