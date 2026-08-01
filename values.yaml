@@ -6,6 +6,19 @@ cluster:
     class: longhorn-postgres-replica-storage-besteffort
   postgresql:
     major: 18
+    # CNPG defaults archive_timeout to 5min, which forces a WAL switch every
+    # five minutes on any cluster with activity. On low-traffic databases that
+    # is almost pure overhead: each switch archives a full 16 MiB segment, so
+    # five clusters produced ~10,000 objects per 7-day retention window - the
+    # dominant source of object count in the backup bucket, ~3x what the
+    # wal-switch CronJob contributed.
+    #
+    # 30m keeps a sane recovery point for a small cluster while cutting that ~6x.
+    # Raise it further for genuinely idle databases; lower it if you need a
+    # tighter RPO on an active one. Note this only fires when there HAS been
+    # write activity - a fully idle database switches nothing either way,
+    # which is what the wal-switch CronJob exists to cover.
+    archiveTimeout: 30min
 
 backup:
   schedule: "0 2 0 * * *"
