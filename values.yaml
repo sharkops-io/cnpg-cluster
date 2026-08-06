@@ -25,8 +25,38 @@ backup:
   minio:
     endpoint: https://rustfs.example.com
     bucket: pg-backups
+
+    # Two ways to supply the S3 credentials. Either way the chart ends up with
+    # a Secret named `barman-credentials` holding `access-key-id` and
+    # `secret-access-key`, which is what the ObjectStore references - so
+    # switching between them changes nothing downstream.
+    #
+    # 1. Literals below. Simple, but the value lands in the consuming repo's
+    #    values file and therefore in git. This is how all five clusters were
+    #    configured until 2026-08-06, and the SAME key pair was copy-pasted
+    #    into every one of them (plus talos-etcd-backup) - so rotating it meant
+    #    editing six repos and running six deploys, which is exactly why it
+    #    never got rotated.
+    #
+    # 2. externalSecret below. The value lives once in OpenBao and ESO
+    #    materialises it into each namespace. Rotation becomes a single
+    #    `bao kv put` that every consumer picks up. PREFER THIS.
     accessKeyId: ""
     secretAccessKey: ""
+
+    externalSecret:
+      # When enabled, the chart renders an ExternalSecret INSTEAD OF a literal
+      # Secret, and accessKeyId/secretAccessKey above are ignored.
+      enabled: false
+      remoteKey: infra/rustfs
+      accessKeyIdProperty: access-key-id
+      secretAccessKeyProperty: secret-access-key
+      refreshInterval: 1h
+      secretStoreRef:
+        name: openbao
+        # ClusterSecretStore, not SecretStore - one store serves every
+        # namespace, so each cluster does not need its own.
+        kind: ClusterSecretStore
   retentionPolicy: "7d"
 
 walSwitch:
