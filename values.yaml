@@ -94,3 +94,13 @@ walSwitch:
     # reason.
     repository: docker.io/alpine/k8s
     tag: "1.36.2"
+
+# Ingress policy for THIS cluster's database pods. Off by default so existing
+# releases are unaffected until they opt in.
+networkPolicy:
+  enabled: false
+  # Label selectors for the application pods allowed to reach postgres on
+  # 5432. The app is usually the only client.
+  allowFromPods: []
+    # - matchLabels:
+    #     app.kubernetes.io/name: wiki

@@ -1,0 +1,66 @@
+{{/*
+CNPG database pods are created by the OPERATOR, not by the app's Helm release,
+so no app-level selector matches them -- without this file they stay wide open
+after the app in front of them is locked down.
+
+Ports, verified on a live pod: 5432 postgresql, 9187 metrics, 8000 status.
+
+The wal-switch CronJob needs NO rule here. It reaches postgres via
+`kubectl exec` (apiserver -> kubelet -> container), not over 5432, so it
+arrives as host traffic and is auto-allowed. It WILL need apiserver egress in
+Phase 2.
+*/}}
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-database
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "cnpg-cluster.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: {{ .Release.Name }}
+  policyTypes:
+    - Ingress
+  ingress:
+    # The operator dials INTO the instance manager on :8000. Found in Hubble,
+    # stated in no values file. Omitting it costs the operator the ability to
+    # manage this cluster.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cnpg-system
+      ports:
+        - port: 8000
+          protocol: TCP
+        - port: 5432
+          protocol: TCP
+    # Streaming replication between the instances of this cluster.
+    - from:
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: {{ .Release.Name }}
+      ports:
+        - port: 5432
+          protocol: TCP
+    {{- range .Values.networkPolicy.allowFromPods }}
+    - from:
+        - podSelector:
+            {{- toYaml . | nindent 12 }}
+      ports:
+        - port: 5432
+          protocol: TCP
+    {{- end }}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+      ports:
+        - port: 9187
+          protocol: TCP
+{{- end }}
