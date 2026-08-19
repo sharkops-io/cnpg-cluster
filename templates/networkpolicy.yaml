@@ -37,13 +37,23 @@ spec:
           protocol: TCP
         - port: 5432
           protocol: TCP
-    # Streaming replication between the instances of this cluster.
+    # Streaming replication between the instances of this cluster, PLUS the
+    # instance manager's peer status endpoint on :8000.
+    #
+    # 8000 was missing here until 2026-08-19 and the omission was invisible:
+    # both wikijs-database and netbox-database reported "Cluster in healthy
+    # state" throughout, because replication itself runs on 5432 and was never
+    # blocked. It surfaced only once Hubble drop metrics were enabled and showed
+    # a steady ~0.2/s of POLICY_DENIED between sibling instances --
+    # netbox-database-1 -> netbox-database-2:8000, tcp SYN.
     - from:
         - podSelector:
             matchLabels:
               cnpg.io/cluster: {{ .Release.Name }}
       ports:
         - port: 5432
+          protocol: TCP
+        - port: 8000
           protocol: TCP
     {{- range .Values.networkPolicy.allowFromPods }}
     - from:
