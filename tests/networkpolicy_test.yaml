@@ -113,3 +113,59 @@ tests:
     asserts:
       - notExists:
           path: spec.egress
+
+  # CROSS-NAMESPACE clients. pgadmin administers every database in the cluster
+  # from its own namespace, so it matches no allowFromPods entry and was
+  # silently blocked from every CNPG cluster once default-deny landed.
+  - it: allows a cross-namespace client on 5432
+    set:
+      networkPolicy:
+        enabled: true
+        allowFromNamespacedPods:
+          - namespace: pgadmin
+            podSelector:
+              matchLabels:
+                app.kubernetes.io/name: pgadmin
+    asserts:
+      # THE WHOLE POINT: both selectors in ONE `from` entry so they AND.
+      # As two entries Kubernetes would OR them, admitting this pod label from
+      # ANY namespace -- wider than intended while still looking correct.
+      - lengthEqual:
+          path: spec.ingress[2].from
+          count: 1
+      - equal:
+          path: spec.ingress[2].from[0].namespaceSelector.matchLabels["kubernetes.io/metadata.name"]
+          value: pgadmin
+      - equal:
+          path: spec.ingress[2].from[0].podSelector.matchLabels["app.kubernetes.io/name"]
+          value: pgadmin
+      - equal:
+          path: spec.ingress[2].ports[0].port
+          value: 5432
+
+  # The same-namespace form must stay same-namespace. If a namespaceSelector
+  # ever leaked into it, every allowFromPods entry across the cluster would
+  # silently widen to all namespaces.
+  - it: keeps allowFromPods scoped to the local namespace
+    set:
+      networkPolicy:
+        enabled: true
+        allowFromPods:
+          - matchLabels:
+              app.kubernetes.io/name: wiki
+    asserts:
+      - notExists:
+          path: spec.ingress[2].from[0].namespaceSelector
+      - equal:
+          path: spec.ingress[2].from[0].podSelector.matchLabels["app.kubernetes.io/name"]
+          value: wiki
+
+  - it: emits no cross-namespace rule when the list is empty
+    set:
+      networkPolicy:
+        enabled: true
+    asserts:
+      # operator, replication, prometheus -- and nothing else.
+      - lengthEqual:
+          path: spec.ingress
+          count: 3

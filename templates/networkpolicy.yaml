@@ -56,9 +56,32 @@ spec:
         - port: 8000
           protocol: TCP
     {{- range .Values.networkPolicy.allowFromPods }}
+    # SAME NAMESPACE ONLY. A `from` entry carrying just a podSelector is scoped
+    # to this NetworkPolicy's own namespace -- that is the Kubernetes default,
+    # not an omission. A client in another namespace cannot be expressed here;
+    # use allowFromNamespacedPods below.
     - from:
         - podSelector:
             {{- toYaml . | nindent 12 }}
+      ports:
+        - port: 5432
+          protocol: TCP
+    {{- end }}
+    {{- range .Values.networkPolicy.allowFromNamespacedPods }}
+    # CROSS-NAMESPACE clients, e.g. pgadmin administering every database in the
+    # cluster from its own namespace.
+    #
+    # BOTH selectors sit in ONE list entry ON PURPOSE. Kubernetes ORs the
+    # entries of a `from` list, so splitting these into two would admit this pod
+    # label from ANY namespace and this namespace's every pod -- far wider than
+    # intended, while still passing a "the rule is there" review. Combined in a
+    # single entry they AND together.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .namespace }}
+          podSelector:
+            {{- toYaml .podSelector | nindent 12 }}
       ports:
         - port: 5432
           protocol: TCP
