@@ -101,6 +101,25 @@ networkPolicy:
   enabled: false
   # Label selectors for the application pods allowed to reach postgres on
   # 5432. The app is usually the only client.
+  #
+  # SAME NAMESPACE ONLY. A `from` entry with only a podSelector is scoped to
+  # this policy's namespace by Kubernetes. Listing a label here does NOT admit a
+  # pod of that name from elsewhere -- for that, use allowFromNamespacedPods.
   allowFromPods: []
     # - matchLabels:
     #     app.kubernetes.io/name: wiki
+
+  # Cross-namespace clients on 5432. pgadmin is the reason this exists: it
+  # administers every database in the cluster from its own namespace, so it
+  # matches no `allowFromPods` entry and was silently blocked from EVERY CNPG
+  # cluster once default-deny landed. The block was invisible -- the databases
+  # reported "Cluster in healthy state" throughout, because nothing they do
+  # depends on pgadmin.
+  #
+  # Renders namespaceSelector AND podSelector inside ONE `from` entry so they
+  # AND together. Do not split them: `from` entries are OR'd.
+  allowFromNamespacedPods: []
+    # - namespace: pgadmin
+    #   podSelector:
+    #     matchLabels:
+    #       app.kubernetes.io/name: pgadmin
