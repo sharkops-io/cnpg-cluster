@@ -44,7 +44,10 @@ tests:
       - hasDocuments:
           count: 0
 
-  - it: should grant pods/exec create on the role
+  # BOTH verbs are asserted deliberately. `create` alone still execs -- kubectl
+  # falls back to SPDY -- so a regression that drops `get` would pass every
+  # functional check and only show up as a 403 per run in the audit log.
+  - it: should grant pods/exec get and create on the role
     template: wal-switch-role.yaml
     asserts:
       - contains:
@@ -52,7 +55,7 @@ tests:
           content:
             apiGroups: [""]
             resources: ["pods/exec"]
-            verbs: ["create"]
+            verbs: ["get", "create"]
 
   - it: should not run as root
     template: wal-switch-cronjob.yaml
