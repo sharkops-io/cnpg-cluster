@@ -93,7 +93,7 @@ walSwitch:
     # behind it. Same image/tag as pgadmin-discovery's CronJob for the same
     # reason.
     repository: docker.io/alpine/k8s
-    tag: "1.37.1"
+    tag: "1.37.2"
 
 # Ingress policy for THIS cluster's database pods. Off by default so existing
 # releases are unaffected until they opt in.
