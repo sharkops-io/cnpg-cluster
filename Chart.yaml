@@ -2,7 +2,7 @@ apiVersion: v2
 name: cnpg-cluster
 description: Reusable Helm chart for CloudNativePG clusters with Barman/Minio WAL archiving
 type: application
-version: 0.7.0
+version: 0.7.1
 appVersion: "18"
 home: https://gitlab.com/sharkops/helm-charts/cnpg-cluster
 sources:
