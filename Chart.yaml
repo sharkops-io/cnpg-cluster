@@ -4,9 +4,9 @@ description: Reusable Helm chart for CloudNativePG clusters with Barman/Minio WA
 type: application
 version: 0.7.1
 appVersion: "18"
-home: https://gitlab.com/sharkops/helm-charts/cnpg-cluster
+home: https://github.com/sharkops-io/cnpg-cluster
 sources:
-  - https://gitlab.com/sharkops/helm-charts/cnpg-cluster
+  - https://github.com/sharkops-io/cnpg-cluster
 maintainers:
   - name: Andrew Landsverk
     email: noreply@example.com
