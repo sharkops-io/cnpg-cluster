@@ -114,9 +114,9 @@ tests:
       - notExists:
           path: spec.egress
 
-  # CROSS-NAMESPACE clients. pgadmin administers every database in the cluster
-  # from its own namespace, so it matches no allowFromPods entry and was
-  # silently blocked from every CNPG cluster once default-deny landed.
+  # CROSS-NAMESPACE clients. A shared pgadmin administers every database from
+  # its own namespace, so it matches no allowFromPods entry and is silently
+  # blocked from every CNPG cluster once default-deny lands.
   - it: allows a cross-namespace client on 5432
     set:
       networkPolicy:
@@ -144,7 +144,7 @@ tests:
           value: 5432
 
   # The same-namespace form must stay same-namespace. If a namespaceSelector
-  # ever leaked into it, every allowFromPods entry across the cluster would
+  # ever leaked into it, every allowFromPods entry in every release would
   # silently widen to all namespaces.
   - it: keeps allowFromPods scoped to the local namespace
     set:

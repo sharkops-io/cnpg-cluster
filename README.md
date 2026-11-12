@@ -52,7 +52,9 @@ releases:
 | `cluster.postgresql.major` | `18` | |
 | `cluster.postgresql.archiveTimeout` | `30min` | CNPG's 5min default archives a full segment every five minutes on any active cluster |
 | `backup.schedule` | `0 2 0 * * *` | 6-field cron, seconds first |
-| `backup.minio.endpoint` / `.bucket` | | S3-compatible endpoint and bucket |
+| `backup.minio.endpoint` | `""` | S3-compatible endpoint URL. Set it for MinIO, RustFS, Ceph RGW, etc.; leave empty only for AWS S3 |
+| `backup.minio.bucket` | `pg-backups` | |
+| `backup.minio.externalSecret.enabled` / `.remoteKey` | `false` / `""` | Pull the S3 key pair from a secret store; `remoteKey` is required when enabled |
 | `backup.retentionPolicy` | `7d` | |
 | `walSwitch.schedule` | `0 1 * * *` | 5-field cron; keep it after `backup.schedule` if you change that |
 | `networkPolicy.enabled` | `false` | `allowFromPods` lists the client pod selectors, same namespace only |
