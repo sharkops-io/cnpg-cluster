@@ -8,7 +8,9 @@ metadata:
 spec:
   configuration:
     destinationPath: s3://{{ .Values.backup.minio.bucket }}
-    endpointURL: {{ .Values.backup.minio.endpoint }}
+    {{- with .Values.backup.minio.endpoint }}
+    endpointURL: {{ . }}
+    {{- end }}
     s3Credentials:
       accessKeyId:
         name: barman-credentials

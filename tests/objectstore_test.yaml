@@ -29,3 +29,12 @@ tests:
       - equal:
           path: spec.configuration.s3Credentials.secretAccessKey.name
           value: barman-credentials
+
+  # Empty endpoint means AWS S3: endpointURL must be omitted, not rendered
+  # as an empty/null field.
+  - it: should omit endpointURL when no endpoint is set
+    set:
+      backup.minio.endpoint: ""
+    asserts:
+      - notExists:
+          path: spec.configuration.endpointURL

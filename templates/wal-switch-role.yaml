@@ -18,9 +18,8 @@ rules:
   # refused does it fall back to SPDY, which is the POST that `create` covers.
   # With `create` alone the WAL switch still works -- via the fallback -- so
   # nothing ever looked broken, while every run left a 403 in the apiserver
-  # audit log (2 per cluster per 24h, measured 2026-09-07 across netbox,
-  # wikijs and vikunja). Granting `get` removes the denial and lets the
-  # modern path succeed on the first attempt.
+  # audit log (2 per cluster per 24h). Granting `get` removes the denial and
+  # lets the modern path succeed on the first attempt.
   - apiGroups: [""]
     resources: ["pods/exec"]
     verbs: ["get", "create"]

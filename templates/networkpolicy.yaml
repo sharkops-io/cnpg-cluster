@@ -7,8 +7,8 @@ Ports, verified on a live pod: 5432 postgresql, 9187 metrics, 8000 status.
 
 The wal-switch CronJob needs NO rule here. It reaches postgres via
 `kubectl exec` (apiserver -> kubelet -> container), not over 5432, so it
-arrives as host traffic and is auto-allowed. It WILL need apiserver egress in
-Phase 2.
+arrives as host traffic and is auto-allowed. It WILL need apiserver egress
+once the namespace also has a default-deny egress policy.
 */}}
 {{- if .Values.networkPolicy.enabled }}
 apiVersion: networking.k8s.io/v1
@@ -40,12 +40,11 @@ spec:
     # Streaming replication between the instances of this cluster, PLUS the
     # instance manager's peer status endpoint on :8000.
     #
-    # 8000 was missing here until 2026-08-19 and the omission was invisible:
-    # both wikijs-database and netbox-database reported "Cluster in healthy
-    # state" throughout, because replication itself runs on 5432 and was never
-    # blocked. It surfaced only once Hubble drop metrics were enabled and showed
-    # a steady ~0.2/s of POLICY_DENIED between sibling instances --
-    # netbox-database-1 -> netbox-database-2:8000, tcp SYN.
+    # Omitting 8000 is invisible: a CNPG cluster keeps reporting "Cluster in
+    # healthy state", because replication itself runs on 5432 and is never
+    # blocked. It surfaces only in Hubble drop metrics, as a steady ~0.2/s of
+    # POLICY_DENIED between sibling instances --
+    # <name>-1 -> <name>-2:8000, tcp SYN.
     - from:
         - podSelector:
             matchLabels:
@@ -68,8 +67,8 @@ spec:
           protocol: TCP
     {{- end }}
     {{- range .Values.networkPolicy.allowFromNamespacedPods }}
-    # CROSS-NAMESPACE clients, e.g. pgadmin administering every database in the
-    # cluster from its own namespace.
+    # CROSS-NAMESPACE clients, e.g. a shared pgadmin administering every
+    # database from its own namespace.
     #
     # BOTH selectors sit in ONE list entry ON PURPOSE. Kubernetes ORs the
     # entries of a `from` list, so splitting these into two would admit this pod

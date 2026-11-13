@@ -9,11 +9,12 @@ cluster:
     # CNPG defaults archive_timeout to 5min, which forces a WAL switch every
     # five minutes on any cluster with activity. On low-traffic databases that
     # is almost pure overhead: each switch archives a full 16 MiB segment, so
-    # five clusters produced ~10,000 objects per 7-day retention window - the
+    # five clusters can produce ~10,000 objects per 7-day retention window - the
     # dominant source of object count in the backup bucket, ~3x what the
-    # wal-switch CronJob contributed.
+    # wal-switch CronJob contributes.
     #
-    # 30m keeps a sane recovery point for a small cluster while cutting that ~6x.
+    # 30m keeps a sane recovery point for a small deployment while cutting that
+    # ~6x.
     # Raise it further for genuinely idle databases; lower it if you need a
     # tighter RPO on an active one. Note this only fires when there HAS been
     # write activity - a fully idle database switches nothing either way,
@@ -23,7 +24,11 @@ cluster:
 backup:
   schedule: "0 2 0 * * *"
   minio:
-    endpoint: https://rustfs.example.com
+    # S3 endpoint URL, e.g. https://s3.example.com. Set it for any
+    # S3-compatible store (MinIO, RustFS, Ceph RGW, ...). Leave it empty only
+    # for AWS S3 itself: endpointURL is then omitted and Barman uses its
+    # default AWS endpoint.
+    endpoint: ""
     bucket: pg-backups
 
     # Two ways to supply the S3 credentials. Either way the chart ends up with
@@ -32,15 +37,15 @@ backup:
     # switching between them changes nothing downstream.
     #
     # 1. Literals below. Simple, but the value lands in the consuming repo's
-    #    values file and therefore in git. This is how all five clusters were
-    #    configured until 2026-08-06, and the SAME key pair was copy-pasted
-    #    into every one of them (plus talos-etcd-backup) - so rotating it meant
-    #    editing six repos and running six deploys, which is exactly why it
-    #    never got rotated.
+    #    values file and therefore in git. With several clusters the SAME key
+    #    pair tends to get copy-pasted into every one of them, so rotating it
+    #    means editing every repo and running every deploy - which is exactly
+    #    why it never gets rotated.
     #
-    # 2. externalSecret below. The value lives once in OpenBao and ESO
-    #    materialises it into each namespace. Rotation becomes a single
-    #    `bao kv put` that every consumer picks up. PREFER THIS.
+    # 2. externalSecret below. The value lives once in a secret store (e.g.
+    #    OpenBao or Vault) and ESO materialises it into each namespace.
+    #    Rotation becomes a single write to the store that every consumer
+    #    picks up. PREFER THIS.
     accessKeyId: ""
     secretAccessKey: ""
 
@@ -48,7 +53,9 @@ backup:
       # When enabled, the chart renders an ExternalSecret INSTEAD OF a literal
       # Secret, and accessKeyId/secretAccessKey above are ignored.
       enabled: false
-      remoteKey: infra/rustfs
+      # Path of the secret in your store, e.g. `infra/s3-backup`. Required
+      # when enabled.
+      remoteKey: ""
       accessKeyIdProperty: access-key-id
       secretAccessKeyProperty: secret-access-key
       refreshInterval: 1h
@@ -72,26 +79,24 @@ walSwitch:
   # The switch is only NEEDED after a backup completes, so it runs once a day,
   # an hour after the default backup.schedule ("0 2 0 * * *" = 00:02:00). The
   # previous "*/15 * * * *" default fired 96 times a day for a once-daily
-  # backup: each switch forces a full 16 MiB WAL segment per cluster, which was
-  # ~7.5 GiB/day across five clusters on the cluster, against backups that complete
-  # in under 20 s.
+  # backup: each switch forces a full 16 MiB WAL segment per cluster, roughly
+  # 1.5 GiB/day per cluster, against backups that typically complete in under
+  # 20 s.
   #
   # !! If you override backup.schedule, override this too. !!
   # They are deliberately NOT derived from each other: cron arithmetic in Helm
   # (including minute overflow into the next hour) could produce a schedule that
   # silently never fires after a backup, which means unrestorable backups — a
   # far worse failure than some wasted writes. Keep this comfortably after the
-  # backup starts; an hour is generous, backups here finish in seconds.
+  # backup starts; an hour is generous for backups that finish in seconds.
   #
   # Note the two use different cron dialects: backup.schedule is CNPG's 6-field
   # form (seconds first), this is a standard 5-field Kubernetes CronJob.
   schedule: "0 1 * * *"
   image:
-    # Matches the cluster's server version (1.35.6) - kubectl's skew policy
-    # only supports clients within ~1 minor version of the apiserver, so
-    # this should track the cluster's k8s version going forward, not drift
-    # behind it. Same image/tag as pgadmin-discovery's CronJob for the same
-    # reason.
+    # kubectl's skew policy only supports clients within ~1 minor version of
+    # the apiserver, so override this to track your cluster's Kubernetes
+    # version rather than letting it drift behind.
     repository: docker.io/alpine/k8s
     tag: "1.37.2"
 
@@ -109,11 +114,11 @@ networkPolicy:
     # - matchLabels:
     #     app.kubernetes.io/name: wiki
 
-  # Cross-namespace clients on 5432. pgadmin is the reason this exists: it
-  # administers every database in the cluster from its own namespace, so it
-  # matches no `allowFromPods` entry and was silently blocked from EVERY CNPG
-  # cluster once default-deny landed. The block was invisible -- the databases
-  # reported "Cluster in healthy state" throughout, because nothing they do
+  # Cross-namespace clients on 5432. A shared admin tool such as pgadmin is the
+  # typical case: it reaches every database from its own namespace, so it
+  # matches no `allowFromPods` entry and is silently blocked from EVERY CNPG
+  # cluster once default-deny lands. The block is invisible -- the databases
+  # report "Cluster in healthy state" throughout, because nothing they do
   # depends on pgadmin.
   #
   # Renders namespaceSelector AND podSelector inside ONE `from` entry so they
